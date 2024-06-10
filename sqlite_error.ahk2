@@ -1,0 +1,128 @@
+sqlite(db_path,sqlite_path:="sqlite3.dll") { ;sqlite version 3460000
+    hModule:=DllCall("GetModuleHandleW","WStr","sqlite3.dll","Ptr") || DllCall("LoadLibraryW","WStr",sqlite_path,"Ptr")
+    if (!hModule) {
+        throw "failed to load sqlite3.dll using path: " sqlite_path
+    }
+
+    filename:=Buffer(StrPut(db_path,"UTF-8")),StrPut(db_path,filename,"UTF-8")
+    DllCall("sqlite3\sqlite3_open","Ptr",filename,"Ptr*",&sqlite3:=0,"Int")
+
+    prepare(_,statement) {
+        zSql:=Buffer(StrPut(statement,"UTF-8")),StrPut(statement,zSql,"UTF-8")
+        ret:=DllCall("sqlite3\sqlite3_prepare_v2","Ptr",sqlite3,"Ptr",zSql,"Int",zSql.Size,"Ptr*",&sqlite3_stmt:=0,"Ptr",0,"Int") ;small performance advantage to passing an nByte parameter that is the number of bytes in the input string including the nul-terminator ;https://www.sqlite.org/c3ref/prepare.html
+        if (ret) {
+            errmsg:=StrGet(DllCall("sqlite3\sqlite3_errmsg","Ptr",sqlite3,"Ptr"),"UTF-8")
+            throw "(" ret ") " errmsg
+        }
+
+        bind_parameter_count:=DllCall("sqlite3\sqlite3_bind_parameter_count","Ptr",sqlite3_stmt,"Int")
+
+        column_count:=DllCall("sqlite3\sqlite3_column_count","Ptr",sqlite3_stmt,"Int")
+        column_names:=[]
+        N:=0
+        while (N < column_count) {
+            column_names.Push(StrGet(DllCall("sqlite3\sqlite3_column_name","Ptr",sqlite3_stmt,"Int",N,"Ptr"),"UTF-8"))
+            ++N
+        }
+
+        all(_,args*) {
+            DllCall("sqlite3\sqlite3_reset","Ptr",sqlite3_stmt,"Int")
+            bind_parameter_idx := 1
+            saveBufArr:=[]
+            while (bind_parameter_idx <= bind_parameter_count) {
+                arg:=args[bind_parameter_idx]
+                switch Type(arg) {
+                    case "Integer":
+                        ret:=DllCall("sqlite3\sqlite3_bind_int64","Ptr",sqlite3_stmt,"Int",bind_parameter_idx,"Int64",arg,"Int")
+                    case "Float":
+                        ret:=DllCall("sqlite3\sqlite3_bind_double","Ptr",sqlite3_stmt,"Int",bind_parameter_idx,"Double",arg,"Int")
+                    case "Buffer":
+                        ret:=DllCall("sqlite3\sqlite3_bind_blob","Ptr",sqlite3_stmt,"Int",bind_parameter_idx,"Ptr",arg,"Int",arg.size,"Ptr",0,"Int")
+                        case "NULL":
+                        ret:=DllCall("sqlite3\sqlite3_bind_null","Ptr",sqlite3_stmt,"Int",bind_parameter_idx,"Int")
+                    case "String":
+                        bindStr:=Buffer(StrPut(arg,"UTF-8")),StrPut(arg,bindStr,"UTF-8")
+                        saveBufArr.Push(bindStr)
+                        ret:=DllCall("sqlite3\sqlite3_bind_text","Ptr",sqlite3_stmt,"Int",bind_parameter_idx,"Ptr",bindStr,"Int",bindStr.size - 1,"Ptr",0,"Int") ;where the NUL terminator would occur ;https://www.sqlite.org/c3ref/bind_blob.html
+                    default:
+                        throw arg
+                }
+                if (ret) {
+                    throw ret
+                }
+                ++bind_parameter_idx
+            }
+
+            rows:=[]
+            loop {
+                rescode:=DllCall("sqlite3\sqlite3_step","Ptr",sqlite3_stmt,"Int")
+                switch (rescode) {
+                    case 100: ;SQLITE_ROW
+                        columns:=Map()
+                        iCol:=0
+                        while (iCol < column_count) {
+                            datatype:=DllCall("sqlite3\sqlite3_column_type","Ptr",sqlite3_stmt,"Int",iCol,"Int")
+                            switch (datatype) {
+                                case 1: ;SQLITE_INTEGER
+                                    column_value:=DllCall("sqlite3\sqlite3_column_int64","Ptr",sqlite3_stmt,"Int",iCol,"Int64")
+                                case 2: ;SQLITE_FLOAT
+                                    column_value:=DllCall("sqlite3\sqlite3_column_double","Ptr",sqlite3_stmt,"Int",iCol,"Double")
+                                case 4: ;SQLITE_BLOB
+                                    column_value:={
+                                        Ptr:DllCall("sqlite3\sqlite3_column_blob","Ptr",sqlite3_stmt,"Int",iCol,"Ptr"),
+                                        Size:DllCall("sqlite3\sqlite3_column_bytes","Ptr",sqlite3_stmt,"Int",iCol,"Int"),
+                                        Base:{__Class:"Buffer"},
+                                    }
+                                case 5: ;SQLITE_NULL
+                                    column_value:={Base:{__Class:"NULL"}}
+                                case 3: ;SQLITE3_TEXT
+                                    column_value:=StrGet(DllCall("sqlite3\sqlite3_column_text","Ptr",sqlite3_stmt,"Int",iCol,"Ptr"),"UTF-8")
+                                default:
+                                    throw datatype
+                            }
+                            columns[iCol+1] := column_value ;Array notation
+                            columns[column_names[iCol+1]] := column_value ;Map notation
+                            columns.%column_names[iCol+1]% := column_value ;Obj notation
+                            ++iCol
+                        }
+                        rows.Push(columns)
+                    case 101: ;SQLITE_DONE
+                        break
+                    case 19: ;SQLITE_CONSTRAINT
+                        throw "SQLITE_CONSTRAINT"
+                    default:
+                        throw rescode
+                }
+            }
+            return rows
+        }
+        return {
+            all:all,
+        }
+    }
+    return {
+        prepare:prepare,
+        NULL:{Base:{__Class:"NULL"}},
+    }
+}
+
+;db:=sqlite("mydb.sqlite","C:\Users\notme\Downloads\sqlite-dll-win-x64-3460000\sqlite3.dll")
+;db:=sqlite(":memory:","C:\Users\notme\Downloads\sqlite-dll-win-x64-3460000\sqlite3.dll")
+;db.prepare("
+;(
+;CREATE TABLE contacts (
+;    contact_id INTEGER PRIMARY KEY,
+;    first_name TEXT NOT NULL,
+;    last_name TEXT NOT NULL,
+;    email TEXT NOT NULL UNIQUE,
+;    phone TEXT NOT NULL UNIQUE
+;`)
+;)").all()
+;insert_statement := db.prepare("INSERT INTO contacts (contact_id,first_name,last_name,email,phone) VALUES(?,?,?,?,?)")
+;insert_statement.all(0,"FNAME0","LNAME0","Email0@email.com","phone0")
+;insert_statement.all(1,"FNAME0","LNAME0","Email1@email.com","phone1")
+;insert_statement.all(2,"FNAME1","LNAME1","Email2@email.com","phone2")
+;
+;select_statement := db.prepare("SELECT email, phone FROM contacts where first_name=? and last_name=?")
+;rows := select_statement.all("FNAME0","LNAME0")
+;MsgBox rows[1].email " " rows[1].phone "`n" rows[2].email " " rows[2].phone

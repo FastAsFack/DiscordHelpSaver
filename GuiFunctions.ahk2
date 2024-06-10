@@ -1,0 +1,56 @@
+#Requires AutoHotkey v2.0
+
+SetFont(guiname, font, size, color := "") {
+    guiname.SetFont(size, font)
+    if color = ""
+        guiname.setfont("cWhite")
+    else
+        guiname.SetFont(color)
+}
+
+SetContextTheme(UseDarkTheme) {
+    UseDarkTheme := !!UseDarkTheme
+    Module := DllCall("kernel32.dll\GetModuleHandle", "Str", "uxtheme.dll", "Ptr")
+    AllowDarkModeForApp := DllCall("kernel32.dll\GetProcAddress",
+        "Ptr", Module, ; hModule
+        "Ptr", 135, ; lpProcName
+        "Ptr"
+    )
+    FlushMenuThemes := DllCall("kernel32.dll\GetProcAddress",
+        "Ptr", Module, ; hModule
+        "Ptr", 136, ; lpProcName
+        "Ptr"
+    )
+    DllCall(AllowDarkModeForApp, "Int", UseDarkTheme)
+    DllCall(FlushMenuThemes)
+    DllCall("kernel32.dll\FreeLibrary", "Ptr", Module)
+}
+
+DefaultSettings(Backcolor, color, guiname, options := "") {
+    guiname.BackColor := Backcolor
+    guiname.Color := color
+    guiname.SetFont("s16 cWhite", "Jetbrains mono")
+    guiname.Opt(options)
+    CurrentGUI := guiname.Hwnd
+    SetWindowColor(CurrentGUI, RgbToBgr(0xFFFFFF), 0x2B2B2B, 0x2B2B2B)
+    RgbToBgr(color) => ((Color >> 16) & 0xFF) | (Color & 0x00FF00) | ((Color & 0xFF) << 16)
+}
+
+DoButtonStuff(guiname, controlname, buttoncolor, eventfunction := empty) {
+    global
+    guiname[controlname].OnEvent("Click", eventfunction)
+    guiname[controlname].SetBackColor(buttoncolor)
+}
+
+SetBackground(GuiName, color := "") {
+    if color = ""
+        Guiname.BackColor := "2b2b2b"
+    else
+        guiname.Backcolor := color
+    guiHWND := Guiname.Hwnd
+    SetWindowColor(guiHWND, RgbToBgr(0xFFFFFF), 0x2B2B2B, 0x2B2B2B)
+    RgbToBgr(color) => ((Color >> 16) & 0xFF) | (Color & 0x00FF00) | ((Color & 0xFF) << 16)
+}
+
+empty(*) {
+}

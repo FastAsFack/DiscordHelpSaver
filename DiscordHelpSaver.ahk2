@@ -1,0 +1,119 @@
+#Requires AutoHotkey v2.0
+#SingleInstance Force
+#Include C:\Users\tijnb\Desktop\Programming\Autohotkey\Personal\library\ImportantInclude.ahk2
+#Include C:\Users\tijnb\Desktop\Programming\Autohotkey\Personal\MainData\sqlite_error.ahk2
+#Include AHK Resources\WebViewToo.ahk2
+
+
+Discord := Gui()
+DefaultSettings("2b2b2b", "cWhite", Discord)
+Discord.Title := "Discord Thread Helper"
+
+Discord.Add("Listview", "x10 y10 w1480 h500 vListview 0x2000 Background2b2323 grid ", ["Date", "Link", "Name"])
+Discord["Listview"].SetDarkMode()
+Discord["Listview"].ModifyCol(1, "150")
+Discord["Listview"].ModifyCol(2, "250")
+Discord["Listview"].ModifyCol(3, "1080")
+
+Discord["Listview"].OnEvent("Doubleclick", OpenLink)
+Discord["Listview"].OnEvent("ContextMenu", ContextMenu)
+
+Discord.Show("w1500 h520")
+ImportListview()
+
+ImportListview(*) {
+    db := sqlite("C:\Users\tijnb\Desktop\Programming\Autohotkey\Automation\Discord-Help\links.sqlite", "C:\Users\tijnb\Desktop\Programming\Autohotkey\Personal\MainData\sqlite3.dll")
+
+    select_statement := db.prepare("SELECT Date, Link, Threadname FROM DataSource")
+    rows := select_statement.all()
+
+    for row in rows
+    {
+        Discord["Listview"].Add(, row.Date, row.Link, row.Threadname)
+    }
+}
+
+ReloadListview(*) {
+    Discord["Listview"].Delete()
+    ImportListview()
+}
+
+
+OpenLink(*) {
+    SelectedRow := Discord["Listview"].GetNext()
+    helpLink := Discord["Listview"].GetText(SelectedRow, "2")
+    ; msgbox helpLink
+
+    MyWindow := WebviewWindow() ;Create the WebviewWindow
+    MyWindow.DOMContentLoaded(DOMContentLoadedHandler) ;Create a callback handler for when pages are loaded
+
+    ;Next we need to define the callback function with the appropriate parameters
+    DOMContentLoadedHandler(Handler, ICoreWebView2, Args) {
+        wv := WebView2.Core(ICoreWebView2)
+        SetTimer((*) => LoadIntoApp(wv.Source), -250)
+    }
+    LoadIntoApp(Source) {
+        if (InStr(Source, "https://discord")) {
+            OpenInApp := MyWindow.qp("document.querySelectorAll('#app-mount').length;") ;Checks if the "Open App" page is there
+            if (OpenInApp) {
+                Script := "var Buttons = document.querySelectorAll('button');for (i = 0; i < Buttons.length; i++) {if (Buttons[i].textContent == 'Open App') {Buttons[i].click();break;}}"
+                MyWindow.ExecuteScript(Script)
+            }
+        }
+    }
+    WinActivate("ahk_exe Discord.exe")
+    MyWindow.Load(helpLink)
+}
+
+ContextMenu(ListViewObj, RowNumber, IsRightClick, X, Y) {
+    SetContextTheme("UseDarkTheme")
+    static DiscordMenu := 0
+    if (DiscordMenu) {
+        DiscordMenu.Delete()
+    }
+    else {
+        DiscordMenu := Menu()
+    }
+
+    DiscordMenu.Add("Copy Link", CopyCurrent)
+    DiscordMenu.Add("Add Link", AddItemGUI)
+    DiscordMenu.Add("Remove Link", RemoveItem)
+    DiscordMenu.Add("Reload Listview", ReloadListview)
+    DiscordMenu.Show()
+
+    CopyCurrent(Item, *) {
+        A_Clipboard := ListViewObj.GetText(RowNumber, "2")
+    }
+    AddItemGUI(Item, *) {
+        global Link := Gui()
+        SetFont(link, "Jetbrains mono", "s16", "cWhite")
+        Link.Title := "Add Item"
+        Link.Add("Text", "x10 y10", "Link:")
+        Link.Add("Edit", "w400 h50 x10 y+10 -VScroll Background211a1a vLink")
+        Link.Add("Text", "x10 y+10", "Thread Name:")
+        Link.Add("Edit", "w400 h50 x10 y+10 -VScroll Background211a1a vThread")
+        Link.Add("Button", "w400 h50 x10 y+10 vSubmitButton", "Submit Thread")
+        DoButtonStuff(Link, "SubmitButton", "211a1a", AddItem)
+        SetBackground(link)
+        Link.Show()
+    }
+    RemoveItem(Item, *) {
+
+    }
+
+    AddItem(*) {
+        db := sqlite("C:\Users\tijnb\Desktop\Programming\Autohotkey\Automation\Discord-Help\links.sqlite", "C:\Users\tijnb\Desktop\Programming\Autohotkey\Personal\MainData\sqlite3.dll")
+
+        insertIntoDB := db.prepare("INSERT INTO DataSource (Date, Link, Threadname) VALUES(?,?,?)")
+        CurrentDate := A_DD "-" A_MM "-" A_YYYY
+        LinkValue := Link["Link"].Value
+        ThreadValue := Link["Thread"].Value
+        insertIntoDB.all(CurrentDate, LinkValue, ThreadValue)
+        Link.Destroy()
+        ReloadListview()
+    }
+}
+
+Pause:: {
+    Reload
+}
