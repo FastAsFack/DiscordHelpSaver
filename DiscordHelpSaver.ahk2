@@ -1,7 +1,8 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
-#Include C:\Users\tijnb\Desktop\Programming\Autohotkey\Personal\library\ImportantInclude.ahk2
-#Include C:\Users\tijnb\Desktop\Programming\Autohotkey\Personal\MainData\sqlite_error.ahk2
+#Include GuiFunctions.ahk2
+#Include sqlite_error.ahk2
+#Include SetWindowColor.ahk2
 #Include AHK Resources\WebViewToo.ahk2
 
 
