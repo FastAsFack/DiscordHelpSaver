@@ -10,7 +10,7 @@ Discord Help Saver is a tool designed to save your Discord channel links, preven
 
 I created Discord Help Saver because I found it incredibly frustrating to lose track of useful Discord channel links. Now, with this tool, I finally have a solution, and I hope you find it as useful as I do!
 
-## Shared Code
+## Used Libraries
 
 Here are all the libraries that i've used to put this all together
 
