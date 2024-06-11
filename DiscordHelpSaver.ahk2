@@ -4,6 +4,7 @@
 #Include sqlite_error.ahk2
 #Include SetWindowColor.ahk2
 #Include AHK Resources\WebViewToo.ahk2
+#Include DarkListView.ahk2
 
 
 Discord := Gui()
