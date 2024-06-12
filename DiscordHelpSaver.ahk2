@@ -1,11 +1,10 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
-#Include GuiFunctions.ahk2
-#Include sqlite_error.ahk2
-#Include SetWindowColor.ahk2
-#Include AHK Resources\WebViewToo.ahk2
-#Include DarkListView.ahk2
-
+#Include Includes\GuiFunctions.ahk2
+#Include Includes\sqlite_error.ahk2
+#Include Includes\SetWindowColor.ahk2
+#Include Includes\AHK Resources\WebViewToo.ahk2
+#Include Includes\DarkListView.ahk2
 
 Discord := Gui()
 DefaultSettings("2b2b2b", "cWhite", Discord)
@@ -24,7 +23,21 @@ Discord.Show("w1500 h520")
 ImportListview()
 
 ImportListview(*) {
-    db := sqlite("C:\Users\tijnb\Desktop\Programming\Autohotkey\Automation\Discord-Help\links.sqlite", "C:\Users\tijnb\Desktop\Programming\Autohotkey\Personal\MainData\sqlite3.dll")
+    db := sqlite("DataSource.sqlite", "Includes\sqlite3.dll")
+    ; db := sqlite("C:\Users\tijnb\Desktop\Programming\Autohotkey\Automation\Discord-Help\links.sqlite", "Includes\sqlite3.dll")
+
+    ; db := sqlite(":memory:")
+    if (!db.prepare("select name from sqlite_master where type='table' AND name=?").all("DataSource").Length) {
+        db.prepare("
+        (
+        CREATE TABLE DataSource (
+            Date TEXT,
+            Link TEXT,
+            Threadname TEXT
+        `)
+        )").all()
+    }
+
 
     select_statement := db.prepare("SELECT Date, Link, Threadname FROM DataSource")
     rows := select_statement.all()
@@ -104,8 +117,7 @@ ContextMenu(ListViewObj, RowNumber, IsRightClick, X, Y) {
     }
 
     AddItem(*) {
-        db := sqlite("C:\Users\tijnb\Desktop\Programming\Autohotkey\Automation\Discord-Help\links.sqlite", "C:\Users\tijnb\Desktop\Programming\Autohotkey\Personal\MainData\sqlite3.dll")
-
+        db := sqlite("DataSource.sqlite", "Includes\sqlite3.dll")
         insertIntoDB := db.prepare("INSERT INTO DataSource (Date, Link, Threadname) VALUES(?,?,?)")
         CurrentDate := A_DD "-" A_MM "-" A_YYYY
         LinkValue := Link["Link"].Value
