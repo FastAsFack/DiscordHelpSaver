@@ -7,7 +7,7 @@
  * @version 1.0.0
  ;***********************************************************************/
 #Requires AutoHotkey v2.1-alpha.11
-#Include C:\Users\tijnb\Desktop\Programming\Autohotkey\Personal\library\WAPI.ahk2
+#Include WAPI.ahk2
 
 class typedef
 {

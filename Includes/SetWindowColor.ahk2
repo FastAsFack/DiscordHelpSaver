@@ -13,7 +13,7 @@
  * @returns {String} - The result of the attribute setting operation.
  */
 
-#Include C:\Users\tijnb\Desktop\Programming\Autohotkey\Personal\library\struct.ahk2
+#Include struct.ahk2
 
 SetWindowColor(hwnd, titleText?, titleBackground?, border?)
 {
