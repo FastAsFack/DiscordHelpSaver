@@ -1,4 +1,4 @@
-#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0+
 #SingleInstance Force
 #Include Includes\GuiFunctions.ahk2
 #Include Includes\sqlite_error.ahk2
@@ -107,9 +107,9 @@ ContextMenu(ListViewObj, RowNumber, IsRightClick, X, Y) {
         Link.Add("Edit", "w400 h50 x10 y+10 -VScroll Background211a1a vLink")
         Link.Add("Text", "x10 y+10", "Thread Name:")
         Link.Add("Edit", "w400 h50 x10 y+10 -VScroll Background211a1a vThread")
-        Link.Add("Button", "w400 h50 x10 y+10 vSubmitButton", "Submit Thread")
-        DoButtonStuff(Link, "SubmitButton", "211a1a", AddItem)
-        SetBackground(link)
+        Link.Add("Button", "w400 h50 x10 y+10 vSubmit", "Submit Thread")
+        DoButtonStuff(Link, "Submit", "211a1a", AddItem)
+        SetBackground(Link)
         Link.Show()
     }
     RemoveItem(Item, *) {

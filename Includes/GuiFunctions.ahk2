@@ -1,5 +1,6 @@
 #Requires AutoHotkey v2.0
 #Include SetWindowColor.ahk2
+#Include ColorButtons.ahk2
 
 SetFont(guiname, font, size, color := "") {
     guiname.SetFont(size, font)
